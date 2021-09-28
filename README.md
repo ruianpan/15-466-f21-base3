@@ -11,7 +11,7 @@ Screen Shot:
 How To Play:
 
 Use arrow keys to move the mouse, wasd to move the camera. When you hear the command from the voice, go to the row of veggies the voice specifies and he will give you a nice compliment.
-The voice values effort a lot, so you have to go to a different row of veggies if you hear the same veggies twice. For instance, if you hear carrot twice, you must head left or right to another row the second time around.
+The voice values effort a lot, so you are in range of eating a veggie during the command, you have to go all the way to the other row of veggies to receive his compliment, so a good strategy to save your time is to get out of the range of the veggies when he is saying nice so that you can revisit asap if he repeats.
 
 Sources: 
 Voiceacting done by me.
