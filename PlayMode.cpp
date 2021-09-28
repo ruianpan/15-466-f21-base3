@@ -12,23 +12,23 @@
 
 #include <random>
 
-GLuint hexapod_meshes_for_lit_color_texture_program = 0;
-Load< MeshBuffer > hexapod_meshes(LoadTagDefault, []() -> MeshBuffer const * {
-	MeshBuffer const *ret = new MeshBuffer(data_path("hexapod.pnct"));
-	hexapod_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
+GLuint garden_meshes_for_lit_color_texture_program = 0;
+Load< MeshBuffer > garden_meshes(LoadTagDefault, []() -> MeshBuffer const * {
+	MeshBuffer const *ret = new MeshBuffer(data_path("garden.pnct"));
+	garden_meshes_for_lit_color_texture_program = ret->make_vao_for_program(lit_color_texture_program->program);
 	return ret;
 });
 
-Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
-	return new Scene(data_path("hexapod.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
-		Mesh const &mesh = hexapod_meshes->lookup(mesh_name);
+Load< Scene > garden_scene(LoadTagDefault, []() -> Scene const * {
+	return new Scene(data_path("garden.scene"), [&](Scene &scene, Scene::Transform *transform, std::string const &mesh_name){
+		Mesh const &mesh = garden_meshes->lookup(mesh_name);
 
 		scene.drawables.emplace_back(transform);
 		Scene::Drawable &drawable = scene.drawables.back();
 
 		drawable.pipeline = lit_color_texture_program_pipeline;
 
-		drawable.pipeline.vao = hexapod_meshes_for_lit_color_texture_program;
+		drawable.pipeline.vao = garden_meshes_for_lit_color_texture_program;
 		drawable.pipeline.type = mesh.type;
 		drawable.pipeline.start = mesh.start;
 		drawable.pipeline.count = mesh.count;
@@ -36,32 +36,32 @@ Load< Scene > hexapod_scene(LoadTagDefault, []() -> Scene const * {
 	});
 });
 
-Load< Sound::Sample > dusty_floor_sample(LoadTagDefault, []() -> Sound::Sample const * {
-	return new Sound::Sample(data_path("dusty-floor.opus"));
+
+
+
+Load< Sound::Sample > cabbage_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("cabbage.wav"));
 });
 
-PlayMode::PlayMode() : scene(*hexapod_scene) {
-	//get pointers to leg for convenience:
+Load< Sound::Sample > carrot_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("carrot.wav"));
+});
+
+Load< Sound::Sample > nice_sample(LoadTagDefault, []() -> Sound::Sample const * {
+	return new Sound::Sample(data_path("nice.wav"));
+});
+
+PlayMode::PlayMode() : scene(*garden_scene) {
+
 	for (auto &transform : scene.transforms) {
-		if (transform.name == "Hip.FL") hip = &transform;
-		else if (transform.name == "UpperLeg.FL") upper_leg = &transform;
-		else if (transform.name == "LowerLeg.FL") lower_leg = &transform;
+		if (transform.name[0] == 'w') rat = &transform;
 	}
-	if (hip == nullptr) throw std::runtime_error("Hip not found.");
-	if (upper_leg == nullptr) throw std::runtime_error("Upper leg not found.");
-	if (lower_leg == nullptr) throw std::runtime_error("Lower leg not found.");
+	if (rat == nullptr) throw std::runtime_error("rat not found.");
 
-	hip_base_rotation = hip->rotation;
-	upper_leg_base_rotation = upper_leg->rotation;
-	lower_leg_base_rotation = lower_leg->rotation;
 
-	//get pointer to camera for convenience:
-	if (scene.cameras.size() != 1) throw std::runtime_error("Expecting scene to have exactly one camera, but it has " + std::to_string(scene.cameras.size()));
+
 	camera = &scene.cameras.front();
-
-	//start music loop playing:
-	// (note: position will be over-ridden in update())
-	leg_tip_loop = Sound::loop_3D(*dusty_floor_sample, 1.0f, get_leg_tip_position(), 10.0f);
+	//bg_music = Sound::loop_3D(*wind_sample, 0.5f, glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
 }
 
 PlayMode::~PlayMode() {
@@ -90,6 +90,29 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = true;
 			return true;
 		}
+
+
+		else if (evt.key.keysym.sym == SDLK_LEFT) {
+			mleft.downs += 1;
+			mleft.pressed = true;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_RIGHT) {
+			mright.downs += 1;
+			mright.pressed = true;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_UP) {
+			mup.downs += 1;
+			mup.pressed = true;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_DOWN) {
+			mdown.downs += 1;
+			mdown.pressed = true;
+			return true;
+		}
+
+
+
+
 	} else if (evt.type == SDL_KEYUP) {
 		if (evt.key.keysym.sym == SDLK_a) {
 			left.pressed = false;
@@ -104,52 +127,32 @@ bool PlayMode::handle_event(SDL_Event const &evt, glm::uvec2 const &window_size)
 			down.pressed = false;
 			return true;
 		}
-	} else if (evt.type == SDL_MOUSEBUTTONDOWN) {
-		if (SDL_GetRelativeMouseMode() == SDL_FALSE) {
-			SDL_SetRelativeMouseMode(SDL_TRUE);
+
+		else if (evt.key.keysym.sym == SDLK_LEFT) {
+			mleft.pressed = false;
 			return true;
 		}
-	} else if (evt.type == SDL_MOUSEMOTION) {
-		if (SDL_GetRelativeMouseMode() == SDL_TRUE) {
-			glm::vec2 motion = glm::vec2(
-				evt.motion.xrel / float(window_size.y),
-				-evt.motion.yrel / float(window_size.y)
-			);
-			camera->transform->rotation = glm::normalize(
-				camera->transform->rotation
-				* glm::angleAxis(-motion.x * camera->fovy, glm::vec3(0.0f, 1.0f, 0.0f))
-				* glm::angleAxis(motion.y * camera->fovy, glm::vec3(1.0f, 0.0f, 0.0f))
-			);
+		else if (evt.key.keysym.sym == SDLK_RIGHT) {
+			mright.pressed = false;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_UP) {
+			mup.pressed = false;
+			return true;
+		} else if (evt.key.keysym.sym == SDLK_DOWN) {
+			mdown.pressed = false;
 			return true;
 		}
+
+
+
 	}
 
 	return false;
 }
 
 void PlayMode::update(float elapsed) {
+	thevoice_clock += elapsed;
 
-	//slowly rotates through [0,1):
-	wobble += elapsed / 10.0f;
-	wobble -= std::floor(wobble);
-
-	hip->rotation = hip_base_rotation * glm::angleAxis(
-		glm::radians(5.0f * std::sin(wobble * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 1.0f, 0.0f)
-	);
-	upper_leg->rotation = upper_leg_base_rotation * glm::angleAxis(
-		glm::radians(7.0f * std::sin(wobble * 2.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-	lower_leg->rotation = lower_leg_base_rotation * glm::angleAxis(
-		glm::radians(10.0f * std::sin(wobble * 3.0f * 2.0f * float(M_PI))),
-		glm::vec3(0.0f, 0.0f, 1.0f)
-	);
-
-	//move sound to follow leg tip position:
-	leg_tip_loop->set_position(get_leg_tip_position(), 1.0f / 60.0f);
-
-	//move camera:
 	{
 
 		//combine inputs into a move:
@@ -159,6 +162,8 @@ void PlayMode::update(float elapsed) {
 		if (!left.pressed && right.pressed) move.x = 1.0f;
 		if (down.pressed && !up.pressed) move.y =-1.0f;
 		if (!down.pressed && up.pressed) move.y = 1.0f;
+
+
 
 		//make it so that moving diagonally doesn't go faster:
 		if (move != glm::vec2(0.0f)) move = glm::normalize(move) * PlayerSpeed * elapsed;
@@ -171,18 +176,99 @@ void PlayMode::update(float elapsed) {
 		camera->transform->position += move.x * right + move.y * forward;
 	}
 
-	{ //update listener to camera position:
-		glm::mat4x3 frame = camera->transform->make_local_to_parent();
-		glm::vec3 right = frame[0];
-		glm::vec3 at = frame[3];
-		Sound::listener.set_position_right(at, right, 1.0f / 60.0f);
+	if(thevoice_fulfilled == 1 && thevoice_clock >=2){
+		thevoice_fulfilled = 0;
+		command=rand() % 2;
+		if(command == 0){
+			cabbage_command = Sound::play_3D(*cabbage_sample, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+			startlocation = 0;
+			if(rat->position.x >= -74 && rat->position.x <=-64){
+				startlocation = 3;
+			}
+			else if(rat->position.x >= -213 && rat->position.x <=-203){
+				startlocation = 4;
+			}
+
+
+	}
+		else if(command = 1){
+			carrot_command = Sound::play_3D(*carrot_sample, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+			startlocation = 0;
+			if(rat->position.x >= -129 && rat->position.x <=-119){
+				startlocation = 1;
+			}
+			else if(rat->position.x >= -278 && rat->position.x <=-268){
+				startlocation = 2;
+			}
+		}
 	}
 
-	//reset button press counters:
+	if(mleft.downs){
+		rat->position.x -=elapsed*ratspeed;
+	}
+	if(mright.downs){
+		rat->position.x +=elapsed*ratspeed;
+	}
+	if(mdown.downs){
+		rat->position.y -=elapsed*ratspeed;
+	}
+	if(mup.downs){
+		rat->position.y +=elapsed*ratspeed;
+	}
+
+
+	if(rat->position.x < -300){
+		rat->position.x = -300;
+	}
+	if(rat->position.x > -30){
+		rat->position.x = -30;
+	}
+
+	if(rat->position.y < -70){
+		rat->position.y = -70;
+	}
+	if(rat->position.y > 130){
+		rat->position.y = 130;
+	}
+
 	left.downs = 0;
 	right.downs = 0;
 	up.downs = 0;
 	down.downs = 0;
+	mleft.downs = 0;
+	mright.downs = 0;
+	mup.downs = 0;
+	mdown.downs = 0;
+
+	if(rat->position.y > 110 || rat->position.y < -45 || thevoice_fulfilled == 1){
+		return;
+	}
+
+
+	if(command == 0){
+
+		if( (rat->position.x >= -74 && rat->position.x <=-64 && startlocation != 3) || (rat->position.x >= -213 && rat->position.x <=-203 && startlocation != 4)  ){
+			thevoice_fulfilled = 1;
+			thevoice_clock = 0;
+		  nice_command = Sound::play_3D(*nice_sample, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+		}
+	}
+
+	if(command == 1){
+
+		if( (rat->position.x >= -129 && rat->position.x <=-119 && startlocation != 1) || (rat->position.x >= -278 && rat->position.x <=-268 && startlocation != 2)  ){
+			thevoice_fulfilled = 1;
+			thevoice_clock = 0;
+			nice_command = Sound::play_3D(*nice_sample, 1.0f, glm::vec3(0.0f, 0.0f, 0.0f), 10.0f);
+		}
+}
+
+
+
+
+
+
+
 }
 
 void PlayMode::draw(glm::uvec2 const &drawable_size) {
@@ -206,31 +292,6 @@ void PlayMode::draw(glm::uvec2 const &drawable_size) {
 
 	scene.draw(*camera);
 
-	{ //use DrawLines to overlay some text:
-		glDisable(GL_DEPTH_TEST);
-		float aspect = float(drawable_size.x) / float(drawable_size.y);
-		DrawLines lines(glm::mat4(
-			1.0f / aspect, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		));
 
-		constexpr float H = 0.09f;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H, -1.0 + 0.1f * H, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0x00, 0x00, 0x00, 0x00));
-		float ofs = 2.0f / drawable_size.y;
-		lines.draw_text("Mouse motion rotates camera; WASD moves; escape ungrabs mouse",
-			glm::vec3(-aspect + 0.1f * H + ofs, -1.0 + + 0.1f * H + ofs, 0.0),
-			glm::vec3(H, 0.0f, 0.0f), glm::vec3(0.0f, H, 0.0f),
-			glm::u8vec4(0xff, 0xff, 0xff, 0x00));
-	}
 	GL_ERRORS();
-}
-
-glm::vec3 PlayMode::get_leg_tip_position() {
-	//the vertex position here was read from the model in blender:
-	return lower_leg->make_local_to_world() * glm::vec4(-1.26137f, -11.861f, 0.0f, 1.0f);
 }
